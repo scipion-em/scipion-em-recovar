@@ -25,7 +25,7 @@
 # *
 # **************************************************************************
 
-V4 = "4.0"
+V4 = "4.0"  # Referring to the paper's revision version
 
 RECOVAR_BINARY = "RECOVAR_BINARY"
 RECOVAR_HOME = "RECOVAR_HOME"
