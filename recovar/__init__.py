@@ -33,7 +33,7 @@ from recovar.constants import *
 
 __version__ = "0.1"  # plugin version
 _logo = "icon.png"
-_references = ['you2019']
+_references = ['gilles2023bayesian']
 
 
 class Plugin(pwem.Plugin):
