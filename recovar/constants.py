@@ -25,18 +25,7 @@
 # *
 # **************************************************************************
 
-"""
-@article{gilles2023bayesian,
-title = "A Bayesian Framework for Cryo-EM Heterogeneity Analysis using Regularized Covariance Estimation",
-journal = "bioRxiv",
-pages = "32",
-year = "2024",
-publisher = "Cold Spring Harbor Laboratory",
-elocation-id = "2023.10.28.564422",
-doi = "https://doi.org/10.1101/2023.10.28.564422",
-url = "https://www.biorxiv.org/content/10.1101/2023.10.28.564422v4",
-eprint = "https://www.biorxiv.org/content/early/2024/09/06/2023.10.28.564422.full.pdf",
-author = "Gilles, Marc Aurèle T and Singer, Amit",
-keywords = "RECOVAR Single Particle Analysis",
-}
-"""
+V4 = "4.0"
+
+RECOVAR_BINARY = "RECOVAR_BINARY"
+RECOVAR_HOME = "RECOVAR_HOME"
