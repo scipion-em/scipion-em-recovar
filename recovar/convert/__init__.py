@@ -69,8 +69,3 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     # Write CTFs
     with open(ctfFilename, 'wb') as f:
         pkl.dump(ctfParams, f)
-
-def writeImageStack(inputParticles: SetOfParticles, outputFilename: str):
-
-    inputParticles.writeStack(fnStack = outputFilename)
-    # TODO: Optimise happy case (no need to rewrite the whole stack, link instead) 
