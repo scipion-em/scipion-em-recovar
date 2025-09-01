@@ -27,15 +27,19 @@
 # **************************************************************************
 
 from pwem.objects import SetOfParticles, Particle, Transform, CTFModel, Acquisition
+from pwem.emlib.image import ImageHandler
+from emtable import Table
 import numpy as np
 import pickle as pkl
 
-def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename: str):
+def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename: str, imagesFilename: str):
 
-    # Prepare pose & CTF metadata
+    # Variables
     eulerAngles = np.empty((len(inputParticles), 3))
     shifts = np.empty((len(inputParticles), 2))
     ctfParams = np.empty((len(inputParticles), 9))
+    images : Table = Table(columns=['rlnImageName'])
+    ih = ImageHandler()
 
     particle : Particle
     ctf : CTFModel = CTFModel()
@@ -52,6 +56,12 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
         # CTF parameters, ONLY the variable ones
         ctf = particle.getCTF()
         ctfParams[i, 2:5] = [ctf.getDefocusU(), ctf.getDefocusV(), ctf.getDefocusAngle()]
+
+        # Add image name to the table
+        images.addRow(ih.locationToXmipp(particle.getLocation()))
+
+    # Write the consolidated Rln-formatted image stack
+    images.write(imagesFilename)
     
     # Assign constant CTF parameters
     acquisition : Acquisition = inputParticles.getAcquisition()
@@ -69,3 +79,5 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     # Write CTFs
     with open(ctfFilename, 'wb') as f:
         pkl.dump(ctfParams, f)
+
+
