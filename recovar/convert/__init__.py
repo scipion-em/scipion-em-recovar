@@ -31,11 +31,12 @@ from pwem.emlib.image import ImageHandler
 from emtable import Table
 import numpy as np
 import pickle as pkl
+from os.path import abspath
 
 def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename: str, imagesFilename: str):
 
     # Variables
-    eulerAngles = np.empty((len(inputParticles), 3))
+    rotations = np.empty((len(inputParticles), 3, 3))
     shifts = np.empty((len(inputParticles), 2))
     ctfParams = np.empty((len(inputParticles), 9))
     images : Table = Table(columns=['rlnImageName'])
@@ -47,10 +48,10 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
         # Pose parameters
         transform : Transform = particle.getTransform()
 
-        rot, tilt, psi = transform.getEulerAngles()
+        mat = transform.getRotationMatrix()
         shiftX, shiftY, _ = transform.getShifts()
 
-        eulerAngles[i] = [rot, tilt, psi]
+        rotations[i] = mat
         shifts[i] = [shiftX, shiftY]
 
         # CTF parameters, ONLY the variable ones
@@ -58,10 +59,12 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
         ctfParams[i, 2:5] = [ctf.getDefocusU(), ctf.getDefocusV(), ctf.getDefocusAngle()]
 
         # Add image name to the table
+        #position, filename = particle.getLocation()
+        #filename = abspath(filename)
         images.addRow(ih.locationToXmipp(particle.getLocation()))
 
     # Write the consolidated Rln-formatted image stack
-    images.write(imagesFilename)
+    images.write(imagesFilename, "particles")
     
     # Assign constant CTF parameters
     acquisition : Acquisition = inputParticles.getAcquisition()
@@ -70,11 +73,19 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     ctfParams[:, 5] = acquisition.getVoltage()
     ctfParams[:, 6] = acquisition.getSphericalAberration()
     ctfParams[:, 7] = acquisition.getAmplitudeContrast()
-    ctfParams[:, 8] = ctf.getPhaseShift()
+    ps = ctf.getPhaseShift()
+    if ps is None:
+        print("WARNING: Phase shift not defined, setting to 0.0")
+        ctfParams[:, 8] = 0.0
+    else:
+        ctfParams[:, 8] = ctf.getPhaseShift()
+
+    # Convert pose information into new format: fraction of box size
+    shifts /= inputParticles.getDimensions()[0:2]
 
     # Write poses
     with open(poseFilename, 'wb') as f:
-        pkl.dump((eulerAngles, shifts), f)   
+        pkl.dump((rotations, shifts), f)   
 
     # Write CTFs
     with open(ctfFilename, 'wb') as f:
