@@ -2,6 +2,8 @@
 # **************************************************************************
 # *
 # * Authors: Eugenio Pablo Murillo Solanas (ep.murillo@usp.ceu.es)
+# * Authors: Oier Lauzirika Zarrabeitia (olauzirika@cnb.csic.es)
+# * Authors: Mikel Iceta Tena (miceta@cnb.csic.es)
 # *
 # * Spanish National Center for Biotechnology (CNB)
 # *
@@ -38,19 +40,16 @@ _references = ['gilles2023bayesian']
 
 class Plugin(pwem.Plugin):
     _url = "https://github.com/scipion-em/scipion-em-recovar"
-    _supportedVersions = [V4]  # binary version
+    _supportedVersions = VERSIONS # binary version
 
     @classmethod
     def _defineVariables(cls):
-        cls._defineVar(RECOVAR_BINARY, "program")
-        cls._defineEmVar(RECOVAR_HOME, f"myplugin-{V4}")
+        pass
 
     @classmethod
     def getEnviron(cls):
         """ Setup the environment variables needed to launch my program. """
         environ = pwutils.Environ(os.environ)
-
-        # ...
 
         return environ
 
@@ -58,14 +57,35 @@ class Plugin(pwem.Plugin):
     def getDependencies(cls):
         """ Return a list of dependencies. """
         neededProgs = []
-
         return neededProgs
 
     @classmethod
     def defineBinaries(cls, env):
-        installCmds = [("make -j 4", "")]  # replace the target "" with e.g. "bin/myprogram"
-        env.addPackage('recovar', version=V4,
+        for ver in cls._supportedVersions:
+            cls.addRecovarPackage(env, ver, default = (ver == RECOVAR_DEFAULT_VERSION))
+                       
+    @classmethod
+    def addRecovarPackage(cls, env, version, default = False):
+        RECOVAR_INSTALLED = f'recovar_{version}_installed'
+        
+        condaEnvCmd = cls.getCondaActivationCmd()
+        # Environment creation
+        RECOVAR_ENV_NAME = f"{RECOVAR_ENV_BASE_NAME}-{version}"
+        condaEnvCmd += f' conda create -y -n {RECOVAR_ENV_NAME} python=3.11 && '
+        condaEnvCmd += f' conda activate {RECOVAR_ENV_NAME} && '
+        # Actual packages installation
+        condaEnvCmd += f' pip install git+https://github.com/scikit-fmm/scikit-fmm.git -f https://download.pytorch.org/whl/torch_stable.html torch==2.3.1+cpu "jax[cuda12]"==0.5.0 recovar=={version} && '
+        condaEnvCmd += f' touch {RECOVAR_INSTALLED}'
+        installationCmds = [(condaEnvCmd, RECOVAR_INSTALLED)]
+
+        envPath = os.environ.get('PATH', "")  # keep path since conda likely in there
+        installEnvVars = {'PATH': envPath} if envPath else None
+
+        env.addPackage(RECOVAR,
+                       version=version,
                        tar='void.tgz',
-                       commands=installCmds,
+                       commands=installationCmds,
                        neededProgs=cls.getDependencies(),
-                       default=True)
+                       vars=installEnvVars,
+                       default=default)
+                       
