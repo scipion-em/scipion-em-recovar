@@ -2,6 +2,8 @@
 # **************************************************************************
 # *
 # * Authors: Eugenio Pablo Murillo Solanas (ep.murillo@usp.ceu.es)
+# * Authors: Oier Lauzirika Zarrabeitia (olauzirika@cnb.csic.es)
+# * Authors: Mikel Iceta Tena (miceta@cnb.csic.es)
 # *
 # * Spanish National Center for Biotechnology (CNB)
 # *
@@ -25,7 +27,11 @@
 # *
 # **************************************************************************
 
-V4 = "4.0"  # Referring to the paper's revision version
+RECOVAR = 'recovar'
 
-RECOVAR_BINARY = "RECOVAR_BINARY"
-RECOVAR_HOME = "RECOVAR_HOME"
+# Supported versions
+V0_4_5 = "0.4.5"  # Released March 17, 2025
+VERSIONS = [V0_4_5]
+RECOVAR_DEFAULT_VERSION = V0_4_5
+
+RECOVAR_ENV_BASE_NAME = "recovar"
