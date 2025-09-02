@@ -47,12 +47,11 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     for i, particle in enumerate(inputParticles):
         # Pose parameters
         transform : Transform = particle.getTransform()
+        matrix = transform.getMatrix()
+        matrix = np.linalg.inv(matrix)
 
-        mat = transform.getRotationMatrix()
-        shiftX, shiftY, _ = transform.getShifts()
-
-        rotations[i] = mat
-        shifts[i] = [shiftX, shiftY]
+        rotations[i] = matrix[0:3, 0:3]
+        shifts[i] = -matrix[0:2, 3]
 
         # CTF parameters, ONLY the variable ones
         ctf = particle.getCTF()
