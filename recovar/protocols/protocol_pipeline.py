@@ -27,6 +27,7 @@
 # **************************************************************************
 
 from enum import Enum
+import os
 from os.path import dirname, basename
 from os import symlink
 
@@ -133,6 +134,7 @@ class RecovarPipeline(EMProtocol):
             args += ['--focus-mask', self.focusMask.get().getFileName()]
 
         # Run
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         Plugin.runRecovar(self, program, args)
         
     def createOutputStep(self):
