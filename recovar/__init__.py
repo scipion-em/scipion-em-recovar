@@ -92,7 +92,7 @@ class Plugin(pwem.Plugin):
     @classmethod
     def getRecovarEnvActivation(cls):
         return cls.getVar(RECOVAR_ENV_ACTIVATION)
-        
+
     @classmethod
     def runRecovar(cls, protocol, program, args, cwd=None):
         fullProgram = '%s %s && %s' % (cls.getCondaActivationCmd(),

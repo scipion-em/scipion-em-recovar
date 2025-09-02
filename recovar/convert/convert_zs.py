@@ -26,4 +26,41 @@
 # *
 # **************************************************************************
 
-from .convert import writeMetadata, convertZsToNumpy
+import pickle as pkl
+import numpy as np
+import argparse
+
+def __convert_embedding_keys(embeddings):
+    result = {}
+    
+    for key, value in embeddings.items():
+        result[str(key)] = value
+        
+    return result
+
+def __read_embeddings(inputFilename: str):
+    with open(inputFilename, 'rb') as f:
+        embeddings = pkl.load(f)
+        
+    return __convert_embedding_keys(embeddings['zs'])
+
+if __name__ == "__main__":
+    argparser = argparse.ArgumentParser(
+        description="Convert recovar embeddings to a numpy file"
+    )
+    
+    argparser.add_argument('-i', '--input', type=str, help="Recovar's embaedding file")
+    argparser.add_argument('-o', '--output', type=str, help="Converted numpy file")
+    argparser.add_argument('-f', '--field', type=str, help="Embedding field to extract")
+
+    args = argparser.parse_args()
+    inputFilename = args.input
+    outputFilename = args.output
+    field = args.field
+    
+    embeddings = __read_embeddings(inputFilename)
+    print(embeddings.keys())
+    zs = embeddings[field]
+    
+    np.save(outputFilename, zs)
+    

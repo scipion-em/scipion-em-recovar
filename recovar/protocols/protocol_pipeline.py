@@ -29,7 +29,8 @@
 from enum import Enum
 import os
 from os.path import dirname, basename
-from os import symlink
+import pickle as pkl
+import numpy as np
 
 from pyworkflow.constants import BETA
 from pyworkflow.protocol.constants import LEVEL_ADVANCED
@@ -37,10 +38,10 @@ import pyworkflow.protocol.params as params
 from pyworkflow.utils import Message
 from pyworkflow.utils.path import createLink
 
-from pwem.objects import SetOfParticles, SetOfParticlesFlex, VolumeMask
+from pwem.objects import SetOfParticles, SetOfParticlesFlex, VolumeMask, ParticleFlex
 from pwem.protocols import EMProtocol
 
-from recovar.convert import writeMetadata
+from recovar.convert import writeMetadata, convertZsToNumpy
 from recovar import Plugin
 
 class outputs(Enum):
@@ -96,6 +97,10 @@ class RecovarPipeline(EMProtocol):
                       allowsNull = True,
                       help = ''
                       )
+        
+        form.addParam('zComponents', params.IntParam,
+                      label = 'Number of Z components',
+                      default = 20 )
 
     # --------------------------- STEPS functions ------------------------------
 
@@ -103,7 +108,7 @@ class RecovarPipeline(EMProtocol):
         # Insert processing steps
         self._insertFunctionStep(self.convertInputStep)
         self._insertFunctionStep(self.runRecovarStep)
-        #self._insertFunctionStep(self.createOutputStep)
+        self._insertFunctionStep(self.createOutputStep)
 
     def convertInputStep(self):
         # Convert the inputs for Recovar
@@ -128,6 +133,7 @@ class RecovarPipeline(EMProtocol):
         args += ['-o', self._getExtraPath()]
         args += ['--poses', self._getPosesFilename()]
         args += ['--ctf', self._getCTFFilename()]
+        args += ['--zdim', self.zComponents.get()]
         args += ['--mask', self.solventMask.get().getFileName()]
 
         if self.focusMask.get() is not None:
@@ -138,9 +144,28 @@ class RecovarPipeline(EMProtocol):
         Plugin.runRecovar(self, program, args)
         
     def createOutputStep(self):
-        pass
-        self._defineOutputs(**{outputs.count.name: timesPrinted})
-        self._defineSourceRelation(self.message, timesPrinted)
+        outputParticles: SetOfParticlesFlex = SetOfParticlesFlex.create(self._getPath())
+        outputParticles.copyInfo(self.inputParticles.get())
+        
+        convertZsToNumpy(
+            self, 
+            self._getEmbeddingsFilename(), 
+            self._getTmpPath('zs.npy'), 
+            self.zComponents.get()
+        )
+        
+        zs = np.load(self._getTmpPath('zs.npy'))
+        #zsNoreg = embeddings['zsNoreg']['%d_noreg' % self.zComponents.get()]
+
+        for particle, embedding in zip(self.inputParticles.get(), zs):
+            outputParticle = ParticleFlex('recovar')
+            outputParticle.copyInfo(particle)
+            outputParticle.setZFlex(embedding)
+            outputParticles.append(outputParticle)
+        outputParticles.write()
+
+        self._defineOutputs(**{outputs.particles.name: outputParticles})
+        self._defineSourceRelation(self.inputParticles, outputParticles)
 
     # --------------------------- INFO functions ---------------------------------
     # --------------------------- UTILS functions --------------------------------
@@ -153,6 +178,9 @@ class RecovarPipeline(EMProtocol):
     
     def _getCTFFilename(self):
         return self._getExtraPath('ctf.pkl')
+    
+    def _getEmbeddingsFilename(self):
+        return self._getExtraPath('model', 'embeddings.pkl')
     
     # THIS IS A TEMPORAL APAÑO until recovar gets this fixed
     def _getDataDirHack(self):
