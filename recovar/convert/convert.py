@@ -30,14 +30,17 @@ import numpy as np
 import pickle as pkl
 import os.path
 
-from pwem.objects import SetOfParticles, Particle, Transform, CTFModel, Acquisition
+from pwem.objects import (SetOfParticles, Particle, SetOfParticlesFlex, ParticleFlex, 
+                          Transform, CTFModel, Acquisition)
 from pwem.emlib.image import ImageHandler
 from emtable import Table
 from recovar import Plugin
 
-def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename: str, imagesFilename: str):
+def writeMetadata(inputParticles: SetOfParticles, 
+                  poseFilename: str, 
+                  ctfFilename: str, 
+                  imagesFilename: str ):
 
-    # Variables
     rotations = np.empty((len(inputParticles), 3, 3))
     shifts = np.empty((len(inputParticles), 2))
     ctfParams = np.empty((len(inputParticles), 9))
@@ -47,7 +50,7 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     particle : Particle
     ctf : CTFModel = CTFModel()
     for i, particle in enumerate(inputParticles):
-        # Pose parameters
+        # Poses
         transform : Transform = particle.getTransform()
         matrix = transform.getMatrix()
         matrix = np.linalg.inv(matrix)
@@ -55,19 +58,13 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
         rotations[i] = matrix[0:3, 0:3]
         shifts[i] = -matrix[0:2, 3]
 
-        # CTF parameters, ONLY the variable ones
+        # CTFs
         ctf = particle.getCTF()
         ctfParams[i, 2:5] = [ctf.getDefocusU(), ctf.getDefocusV(), ctf.getDefocusAngle()]
 
-        # Add image name to the table
-        #position, filename = particle.getLocation()
-        #filename = abspath(filename)
+        # Image location
         images.addRow(ih.locationToXmipp(particle.getLocation()))
 
-    # Write the consolidated Rln-formatted image stack
-    images.write(imagesFilename, "particles")
-    
-    # Assign constant CTF parameters
     acquisition : Acquisition = inputParticles.getAcquisition()
     ctfParams[:, 0] = inputParticles.getDimensions()[0]
     ctfParams[:, 1] = inputParticles.getSamplingRate()
@@ -81,8 +78,9 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     else:
         ctfParams[:, 8] = ctf.getPhaseShift()
 
-    # Convert pose information into new format: fraction of box size
     shifts /= inputParticles.getDimensions()[0:2]
+
+    images.write(imagesFilename, "particles")
 
     # Write poses
     with open(poseFilename, 'wb') as f:
@@ -91,6 +89,19 @@ def writeMetadata(inputParticles: SetOfParticles, poseFilename: str, ctfFilename
     # Write CTFs
     with open(ctfFilename, 'wb') as f:
         pkl.dump(ctfParams, f)
+
+def readEmbedding(setOfParticlesFlex: SetOfParticlesFlex, 
+                  inputParticles: SetOfParticles,
+                  embeddingsFilename: str):
+    embeddings = np.load(embeddingsFilename)
+    
+    particle: Particle
+    embedding: np.ndarray
+    flexParticle = ParticleFlex('recovar')
+    for particle, embedding in zip(inputParticles, embeddings):
+        flexParticle.copyInfo(particle)
+        flexParticle.setZFlex(embedding)
+        setOfParticlesFlex.append(flexParticle)
 
 def convertZsToNumpy(protocol, zsFilename: str, numpyFilename: str, field: str):
     PYTHON = 'python'

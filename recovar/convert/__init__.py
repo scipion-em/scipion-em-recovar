@@ -26,4 +26,4 @@
 # *
 # **************************************************************************
 
-from .convert import writeMetadata, convertZsToNumpy
+from .convert import writeMetadata, readEmbedding, convertZsToNumpy

@@ -26,31 +26,24 @@
 # *
 # **************************************************************************
 
-from enum import Enum
 import os
-from os.path import dirname, basename
-import pickle as pkl
-import numpy as np
 
 from pyworkflow.constants import BETA
 from pyworkflow.protocol.constants import LEVEL_ADVANCED
 import pyworkflow.protocol.params as params
 from pyworkflow.utils import Message
-from pyworkflow.utils.path import createLink
+from pyworkflow.utils.path import createLink, makePath
 
-from pwem.objects import SetOfParticles, SetOfParticlesFlex, VolumeMask, ParticleFlex
+from pwem.objects import SetOfParticles, SetOfParticlesFlex, VolumeMask
 from pwem.protocols import EMProtocol
 
-from recovar.convert import writeMetadata, convertZsToNumpy
+from recovar.convert import writeMetadata, readEmbedding, convertZsToNumpy
 from recovar import Plugin
-
-class outputs(Enum):
-    particles = SetOfParticlesFlex
+from recovar.constants import RECOVAR
 
 class RecovarPipeline(EMProtocol):
     _label = 'pipeline'
     _devStatus = BETA
-    _possibleOutputs = outputs
     
     def _defineParams(self, form: params.Form):
         """ Define the input parameters that will be used.
@@ -105,32 +98,34 @@ class RecovarPipeline(EMProtocol):
     # --------------------------- STEPS functions ------------------------------
 
     def _insertAllSteps(self):
-        # Insert processing steps
         self._insertFunctionStep(self.convertInputStep)
         self._insertFunctionStep(self.runRecovarStep)
         self._insertFunctionStep(self.createOutputStep)
 
     def convertInputStep(self):
-        # Convert the inputs for Recovar
+        makePath(self._getImagesDatadir())
+
         writeMetadata(self.inputParticles.get(),
                       self._getPosesFilename(),
                       self._getCTFFilename(),
                       self._getImagesFilename())
-        # HACK to avoid Recovar bug with relative paths
+        
         files = self.inputParticles.get().getFiles()
         for file in files:
-            #symlink(file, self._getExtraPath(basename(file)))
-            createLink(file, self._getExtraPath(basename(file)))
+            basename = os.path.basename(file)
+            createLink(
+                file, 
+                self._getImagesDatadir(basename)
+            )
         
     def runRecovarStep(self):
-        # Prepare command line
         program = 'recovar'
 
-        # Fill arguments
         args = []
         args.append('pipeline')
         args.append(self._getImagesFilename())
-        args += ['-o', self._getExtraPath()]
+        args += ['--datadir', self._getImagesDatadir()]
+        args += ['-o', self._getOutputDir()]
         args += ['--poses', self._getPosesFilename()]
         args += ['--ctf', self._getCTFFilename()]
         args += ['--zdim', self.zComponents.get()]
@@ -139,53 +134,60 @@ class RecovarPipeline(EMProtocol):
         if self.focusMask.get() is not None:
             args += ['--focus-mask', self.focusMask.get().getFileName()]
 
-        # Run
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         Plugin.runRecovar(self, program, args)
         
     def createOutputStep(self):
-        outputParticles: SetOfParticlesFlex = SetOfParticlesFlex.create(self._getPath())
-        outputParticles.copyInfo(self.inputParticles.get())
-        
-        convertZsToNumpy(
-            self, 
-            self._getEmbeddingsFilename(), 
-            self._getTmpPath('zs.npy'), 
-            self.zComponents.get()
-        )
-        
-        zs = np.load(self._getTmpPath('zs.npy'))
-        #zsNoreg = embeddings['zsNoreg']['%d_noreg' % self.zComponents.get()]
+        fields = self._getOutputFields()
+        for field in fields:
+            outputParticles: SetOfParticlesFlex = SetOfParticlesFlex.create(
+                self._getPath(),
+                suffix=field,
+                progName=RECOVAR
+            )
+            outputParticles.copyInfo(self.inputParticles.get())
 
-        for particle, embedding in zip(self.inputParticles.get(), zs):
-            outputParticle = ParticleFlex('recovar')
-            outputParticle.copyInfo(particle)
-            outputParticle.setZFlex(embedding)
-            outputParticles.append(outputParticle)
-        outputParticles.write()
-
-        self._defineOutputs(**{outputs.particles.name: outputParticles})
-        self._defineSourceRelation(self.inputParticles, outputParticles)
+            convertZsToNumpy(
+                self, 
+                self._getEmbeddingsFilename(), 
+                self._getTemporaryNumpyEmbeddingsFilename(), 
+                field
+            )
+            
+            readEmbedding(
+                outputParticles, 
+                self.inputParticles.get(), 
+                self._getTemporaryNumpyEmbeddingsFilename()
+            )
+            
+            self._defineOutputs(**{field: outputParticles})
+            self._defineSourceRelation(self.inputParticles, outputParticles)
 
     # --------------------------- INFO functions ---------------------------------
     # --------------------------- UTILS functions --------------------------------
-    
-    def _getImagesFilename(self):
-        return self._getExtraPath('images.star')
-    
-    def _getPosesFilename(self):
+    def _getImagesDatadir(self, *args) -> str:
+        return self._getExtraPath('images', *args)
+
+    def _getImagesFilename(self) -> str:
+        return self._getImagesDatadir('images.star')
+
+    def _getPosesFilename(self) -> str:
         return self._getExtraPath('poses.pkl')
     
-    def _getCTFFilename(self):
+    def _getCTFFilename(self) -> str:
         return self._getExtraPath('ctf.pkl')
     
-    def _getEmbeddingsFilename(self):
-        return self._getExtraPath('model', 'embeddings.pkl')
+    def _getOutputDir(self, *paths) -> str:
+        return self._getExtraPath('output', *paths)
     
-    # THIS IS A TEMPORAL APAÑO until recovar gets this fixed
-    def _getDataDirHack(self):
-        datadirs = set(map(dirname, self.inputParticles.get().getFiles()))
-        if len(datadirs) != 1:
-            self.error("Input particles should come from the same directory")
-        else:
-            return datadirs.pop()    
+    def _getEmbeddingsFilename(self) -> str:
+        return self._getOutputDir('model', 'embeddings.pkl')
+    
+    def _getTemporaryNumpyEmbeddingsFilename(self) -> str:
+        return self._getTmpPath('embedding.npy')
+    
+    def _getOutputFields(self) -> list:
+        return [
+            self.zComponents.get(),
+            f'{self.zComponents.get()}_noreg'
+        ]
