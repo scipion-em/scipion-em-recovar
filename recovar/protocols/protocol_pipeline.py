@@ -187,7 +187,8 @@ class RecovarPipeline(EMProtocol):
         return self._getTmpPath('embedding.npy')
     
     def _getOutputFields(self) -> list:
+        nz: int = self.zComponents.get()
         return [
-            self.zComponents.get(),
-            f'{self.zComponents.get()}_noreg'
+            f'{nz}',
+            f'{nz}_noreg'
         ]
