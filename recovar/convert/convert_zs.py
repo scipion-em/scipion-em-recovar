@@ -59,7 +59,6 @@ if __name__ == "__main__":
     field = args.field
     
     embeddings = __read_embeddings(inputFilename)
-    print(embeddings.keys())
     zs = embeddings[field]
     
     np.save(outputFilename, zs)

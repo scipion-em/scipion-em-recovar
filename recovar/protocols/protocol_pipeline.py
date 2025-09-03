@@ -183,6 +183,12 @@ class RecovarPipeline(EMProtocol):
     def _getEmbeddingsFilename(self) -> str:
         return self._getOutputDir('model', 'embeddings.pkl')
     
+    def _getEigenVolumeFilename(self, index: int) -> str:
+        return self._getOutputDir('output', 'volumes', f'eigen_pos{index:04d}.mrc')
+    
+    def _getConsensusVolumeFilename(self) -> str:
+        return self._getOutputDir('output', 'volumes', 'mean.mrc')
+    
     def _getTemporaryNumpyEmbeddingsFilename(self) -> str:
         return self._getTmpPath('embedding.npy')
     

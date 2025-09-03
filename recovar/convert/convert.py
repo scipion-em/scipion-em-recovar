@@ -97,8 +97,8 @@ def readEmbedding(setOfParticlesFlex: SetOfParticlesFlex,
     
     particle: Particle
     embedding: np.ndarray
-    flexParticle = ParticleFlex('recovar')
     for particle, embedding in zip(inputParticles, embeddings):
+        flexParticle = ParticleFlex('recovar')
         flexParticle.copyInfo(particle)
         flexParticle.setZFlex(embedding)
         setOfParticlesFlex.append(flexParticle)
