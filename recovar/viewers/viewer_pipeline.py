@@ -28,7 +28,7 @@
 import os
 
 from pyworkflow.viewer import ProtocolViewer, DESKTOP_TKINTER, WEB_DJANGO
-from pyworkflow.protocol.params import LabelParam
+from pyworkflow.protocol.params import LabelParam, BooleanParam, FloatParam
 
 from pwem.viewers import ChimeraView
 
@@ -45,6 +45,8 @@ class RecovarViewerPipeline(ProtocolViewer):
     # --------------------------- DEFINE param functions ----------------------
     def _defineParams(self, form):
         form.addSection(label='Analysis')
+        form.addParam('showConsensus', BooleanParam, default=True, label='Show consensus volume')
+        form.addParam('eigenVolumeThreshold', FloatParam, default=8, label='Eigen-volume threshold')
         form.addParam('displayEigenVolume', LabelParam, label='Eigen-volumes')
 
     #--------------------------- INFO functions ----------------------------------------------------
@@ -73,15 +75,18 @@ class RecovarViewerPipeline(ProtocolViewer):
         
         with open(scriptFile, 'w') as f:
             for i in range(n):
+                id = i+1
                 eigenVolumeFilename = os.path.abspath(self._getEigenVolumeFilename(i))
-                f.write('open %s id %d.1\n' % (consensusVolumeFilename, i+1))
-                f.write('open %s id %d.2\n' % (eigenVolumeFilename, i+1))
-                f.write('open %s id %d.3\n' % (eigenVolumeFilename, i+1))
-                f.write('volume multiply #%d.2 #%d.3 modelId %d.4\n' % ((i+1, )*3))
-                f.write('volume #%d.4 rmsLevel 3\n' % (i+1))
-                f.write('color sample #%d.4 map #%d.2 range -1e-8,1e-8\n' % ((i+1,)*2))
-                f.write('color #%d.1 #9a9a9a80\n' % (i+1))
-                f.write('close #%d.3\n' % (i+1))
+                if self.showConsensus.get():
+                    f.write('open %s id %d.1\n' % (consensusVolumeFilename, id))
+                    f.write('color #%d.1 #9a9a9a80\n' % id)
+
+                f.write('open %s id %d.2\n' % (eigenVolumeFilename, id))
+                f.write('open %s id %d.3\n' % (eigenVolumeFilename, id))
+                f.write('volume multiply #%d.2 #%d.3 modelId %d.4\n' % ((id, )*3))
+                f.write('volume #%d.4 rmsLevel %f\n' % (i+1, self.eigenVolumeThreshold.get()))
+                f.write('color sample #%d.4 map #%d.2 range -1e-12,1e-12\n' % ((id,)*2))
+                f.write('close #%d.3\n' % id)
             f.write("tile\n")
             
         return scriptFile
