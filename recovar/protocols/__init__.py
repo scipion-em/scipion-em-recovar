@@ -4,3 +4,4 @@
 # Find documentation here: https://scipion-em.github.io/docs/docs/developer/creating-a-protocol
 # **************************************************************************
 from .protocol_pipeline import RecovarPipeline
+from .protocol_analyze import RecovarAnalyze
