@@ -28,11 +28,9 @@
 import os
 
 from pyworkflow.viewer import ProtocolViewer, DESKTOP_TKINTER, WEB_DJANGO
-from pyworkflow.protocol.params import LabelParam, PointerParam
+from pyworkflow.protocol.params import LabelParam
 
 from pwem.viewers import ChimeraView
-from pwem import emlib
-from pwem.objects import Volume
 
 from recovar.protocols import RecovarPipeline
 
@@ -73,16 +71,17 @@ class RecovarViewerPipeline(ProtocolViewer):
         consensusVolumeFilename = os.path.abspath(self._getConsensusVolumeFilename())
         n = self.protocol.zComponents.get()
         
-        ih = emlib.Image()
         with open(scriptFile, 'w') as f:
             for i in range(n):
                 eigenVolumeFilename = os.path.abspath(self._getEigenVolumeFilename(i))
-                ih.read(eigenVolumeFilename)
-                eigenVolume = ih.getData()
-                limit = abs(eigenVolume).max()
-                f.write("open %s %s\n" % (consensusVolumeFilename, eigenVolumeFilename))
-                f.write("vol #%d.%d hide\n" % (i+1, 2))
-                f.write("color sample #%d.%d map #%d.%d range %f,%f\n" % (i+1, 1, i+1, 2, -limit, limit))
+                f.write('open %s id %d.1\n' % (consensusVolumeFilename, i+1))
+                f.write('open %s id %d.2\n' % (eigenVolumeFilename, i+1))
+                f.write('open %s id %d.3\n' % (eigenVolumeFilename, i+1))
+                f.write('volume multiply #%d.2 #%d.3 modelId %d.4\n' % ((i+1, )*3))
+                f.write('volume #%d.4 rmsLevel 3\n' % (i+1))
+                f.write('color sample #%d.4 map #%d.2 range -1e-8,1e-8\n' % ((i+1,)*2))
+                f.write('color #%d.1 #9a9a9a80\n' % (i+1))
+                f.write('close #%d.3\n' % (i+1))
             f.write("tile\n")
             
         return scriptFile
