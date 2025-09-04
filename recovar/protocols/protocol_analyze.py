@@ -34,6 +34,7 @@ import pyworkflow.protocol.params as params
 from pyworkflow.utils import Message
 
 from pwem.protocols import EMProtocol
+from pwem.objects import SetOfVolumes, Volume
 
 from recovar import Plugin
 from recovar.protocols import RecovarPipeline
@@ -68,6 +69,9 @@ class RecovarAnalyze(EMProtocol):
                       allowsNull = False,
                       help = ''
                       )
+        
+        form.addParam('numberOfClusters', params.IntParam, default=40, 
+                      label='Number of clusters')
 
     # --------------------------- STEPS functions ------------------------------
 
@@ -85,12 +89,24 @@ class RecovarAnalyze(EMProtocol):
         args.append(pipeline._getOutputDir())
         args += ['-o', self._getOutputDirectory()]
         args += ['--zdim', pipeline.zComponents.get()]
+        args += ['--n-clusters', self.numberOfClusters.get()]
 
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         Plugin.runRecovar(self, program, args)
         
     def createOutputStep(self):
-        pass
+        n = self.numberOfClusters.get()
+        
+        outputVolumes = SetOfVolumes.create(self._getPath())
+        outputVolumes.setSamplingRate(
+            self._getPipelineProtocol().inputParticles.get().getSamplingRate()
+        )
+        
+        for i in range(n):
+            vol = Volume(location=self._getOutputVolumeFile(i))
+            outputVolumes.append(vol)
+        
+        self._defineOutputs(volumes=outputVolumes)
 
     # --------------------------- INFO functions ---------------------------------
     def _validate(self):
@@ -109,3 +125,9 @@ class RecovarAnalyze(EMProtocol):
     def _getOutputDirectory(self, *paths) -> str:
         return self._getExtraPath('analysis', *paths)
     
+    def _getOutputVolumeFile(self, index: int) -> str:
+        return self._getOutputDirectory(
+            'kmeans_center_volumes', 
+            'all_volumes', 
+            'vol%04d.mrc' % index
+        )
