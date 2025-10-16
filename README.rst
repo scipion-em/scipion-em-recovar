@@ -64,4 +64,4 @@ Protocols
 References
 ----------
 
-1. Marc Aurèlie Gilles, Amit Singer, Proceedings of the National Academy of Sciences, 2025 
+1. Marc Aurèle Gilles, Amit Singer, Proceedings of the National Academy of Sciences, 2025 
