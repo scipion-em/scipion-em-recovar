@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # **************************************************************************
 # *
-# * Authors: Eugenio Pablo Murillo Solanas (ep.murillo@usp.ceu.es)
 # * Authors: Oier Lauzirika Zarrabeitia (olauzirika@cnb.csic.es)
 # * Authors: Mikel Iceta Tena (miceta@cnb.csic.es)
 # *
@@ -27,15 +26,40 @@
 # *
 # **************************************************************************
 
-RECOVAR = 'recovar'
+import pickle as pkl
+import numpy as np
+import argparse
 
-# Supported versions
-V0_4_5 = "0.4.5"  # Released March 17, 2025
-VERSIONS = [V0_4_5]
-RECOVAR_DEFAULT_VERSION = V0_4_5
+def __convert_embedding_keys(embeddings):
+    result = {}
+    
+    for key, value in embeddings.items():
+        result[str(key)] = value
+        
+    return result
 
-RECOVAR_ENV_BASE_NAME = "recovar"
-RECOVAR_ENV_ACTIVATION = "RECOVAR_ENV_ACTIVATION"
+def __read_embeddings(inputFilename: str):
+    with open(inputFilename, 'rb') as f:
+        embeddings = pkl.load(f)
+        
+    return __convert_embedding_keys(embeddings['zs'])
 
-DEFAULT_ENV_NAME = f"{RECOVAR}-{RECOVAR_DEFAULT_VERSION}"
-DEFAULT_ACTIVATION_CMD = 'conda activate ' + DEFAULT_ENV_NAME
+if __name__ == "__main__":
+    argparser = argparse.ArgumentParser(
+        description="Convert recovar embeddings to a numpy file"
+    )
+    
+    argparser.add_argument('-i', '--input', type=str, help="Recovar's embaedding file")
+    argparser.add_argument('-o', '--output', type=str, help="Converted numpy file")
+    argparser.add_argument('-f', '--field', type=str, help="Embedding field to extract")
+
+    args = argparser.parse_args()
+    inputFilename = args.input
+    outputFilename = args.output
+    field = args.field
+    
+    embeddings = __read_embeddings(inputFilename)
+    zs = embeddings[field]
+    
+    np.save(outputFilename, zs)
+    

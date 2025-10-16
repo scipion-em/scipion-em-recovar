@@ -44,7 +44,7 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def _defineVariables(cls):
-        pass
+        cls._defineVar(RECOVAR_ENV_ACTIVATION, DEFAULT_ACTIVATION_CMD)
 
     @classmethod
     def getEnviron(cls):
@@ -88,4 +88,15 @@ class Plugin(pwem.Plugin):
                        neededProgs=cls.getDependencies(),
                        vars=installEnvVars,
                        default=default)
+        
+    @classmethod
+    def getRecovarEnvActivation(cls):
+        return cls.getVar(RECOVAR_ENV_ACTIVATION)
+
+    @classmethod
+    def runRecovar(cls, protocol, program, args, cwd=None):
+        fullProgram = '%s %s && %s' % (cls.getCondaActivationCmd(),
+                                       cls.getRecovarEnvActivation(), program)
+        protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd,
+                        numberOfMpi=1)
                        
