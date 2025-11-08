@@ -1,6 +1,6 @@
-=============
+===============
 RECOVAR Plugin
-=============
+===============
 
 This plugin provides wrappers for several programs of `RECOVAR <https://github.com/ma-gilles/recovar>`_ software suite.
 
@@ -64,4 +64,4 @@ Protocols
 References
 ----------
 
-1. Marc Aurèle Gilles, Amit Singer, Proceedings of the National Academy of Sciences, 2025 
+1. Marc A. Gilles, Amit Singer, Proceedings of the National Academy of Sciences, 2025 
