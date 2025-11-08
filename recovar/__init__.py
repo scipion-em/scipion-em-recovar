@@ -33,7 +33,7 @@ import pwem
 
 from recovar.constants import *
 
-__version__ = "0.1"  # plugin version
+__version__ = "3.1.0"  # plugin version
 _logo = "icon.png"
 _references = ['gilles2023bayesian']
 
