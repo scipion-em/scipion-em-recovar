@@ -12,7 +12,7 @@ authors = [
 ]
 requires-python = ">=3.8"
 readme = "README.rst"
-license = { file = "LICENSE" }
+license = {text = "GNU General Public License v3 (GPLv3)"}
 classifiers = [
     #   3 - Alpha
     #   4 - Beta
