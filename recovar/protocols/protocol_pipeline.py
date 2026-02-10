@@ -96,6 +96,26 @@ class RecovarPipeline(EMProtocol):
         form.addParam('zComponents', params.IntParam,
                       label = 'Number of Z components',
                       default = 20 )
+        
+        form.addSection(label="Memory")
+
+        form.addParam("lazyLoading", params.BooleanParam,
+                      label = "Lazy RAM loading",
+                      default=True,
+                      help="Set to True to load the particle images in RAM only when they are needed. "
+                           "This can reduce the RAM usage but it can also increase the runtime. Use this"
+                           " option if you have a large dataset and/or limited RAM."
+                      )
+        
+        form.addParam('memoryMode', params.EnumParam,
+                      choices = ['Regular', 'Low Memory', 'Ultra Low Memory'],
+                      label = 'Memory mode',
+                      default = 0,
+                      help="Memory mode to use. Regular mode uses more RAM but it is faster." \
+                      " Low Memory mode uses less RAM but it is slower. " \
+                      "Ultra Low Memory mode uses the least RAM but it is the slowest. " \
+                      "Use Low Memory or Ultra Low Memory mode if you have a large dataset and/or limited RAM."
+                      )
 
     # --------------------------- STEPS functions ------------------------------
 
@@ -135,11 +155,17 @@ class RecovarPipeline(EMProtocol):
 
         if self.focusMask.get() is not None:
             args += ['--focus-mask', self.focusMask.get().getFileName()]
+        
+        if self.lazyLoading.get() is True:
+            args += ['--lazy']
+        if self.memoryMode.get() == 1: # Low Memory
+            args += ['--low-memory']
+        elif self.memoryMode.get() == 2: # Ultra Low Memory
+            args += ['--ultra-low-memory']
 
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(self.gpuList.get())
+
         Plugin.runRecovar(self, program, args)
-
-
         
     def createOutputStep(self):
         fields = self._getOutputFields()
