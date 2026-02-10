@@ -159,9 +159,9 @@ class RecovarPipeline(EMProtocol):
         if self.lazyLoading.get() is True:
             args += ['--lazy']
         if self.memoryMode.get() == 1: # Low Memory
-            args += ['--low-memory']
+            args += ['--low-memory-option']
         elif self.memoryMode.get() == 2: # Ultra Low Memory
-            args += ['--ultra-low-memory']
+            args += ['--very-low-memory-option']
 
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(self.gpuList.get())
 
