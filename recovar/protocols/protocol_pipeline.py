@@ -44,6 +44,8 @@ from recovar.constants import RECOVAR
 class RecovarPipeline(EMProtocol):
     _label = 'pipeline'
     _devStatus = BETA
+
+    _possibleOutputs = {"OutputParticles": SetOfParticlesFlex}
     
     def _defineParams(self, form: params.Form):
         """ Define the input parameters that will be used.
@@ -134,8 +136,10 @@ class RecovarPipeline(EMProtocol):
         if self.focusMask.get() is not None:
             args += ['--focus-mask', self.focusMask.get().getFileName()]
 
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(self.gpuList.get())
         Plugin.runRecovar(self, program, args)
+
+
         
     def createOutputStep(self):
         fields = self._getOutputFields()
